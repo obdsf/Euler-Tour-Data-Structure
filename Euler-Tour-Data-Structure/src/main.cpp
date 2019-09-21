@@ -9,9 +9,10 @@
 #include "LEDA/graph/graph.h"
 #include "LEDA/graph/ugraph.h"
 #include "LEDA/graph/node_array.h"
-#include "LEDA/graph/graph_alg.h"
+// #include "LEDA/graph/graph_alg.h"
+// #include "LEDA/graph/graph_misc.h"
+#include "LEDA/core/array.h"
 #include "LEDA/core/dynamic_trees.h"
-#include "LEDA/graph/graph_misc.h"
 // Custom
 #include "ETTree.h"
 //  Forward Declarations
@@ -26,7 +27,7 @@ int writeGraphDOT(const leda::graph &G,
 // TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN
 // #############################################################################################################
 void test_leda_dynamic_trees();
-leda::node test_leda_graph(leda::graph& G);
+leda::node test_leda_graph(leda::graph& G, leda::node &a, leda::node &b);
 // #############################################################################################################
 // TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN
 // #############################################################################################################
@@ -37,66 +38,18 @@ int main()
 // #############################################################################################################
 // TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN
 // #############################################################################################################
-  if(tc) {
-    leda::graph G;
-    leda::node s{test_leda_graph(G)};
-    leda::node_array<int> dist{G, -1};
 
-    writeGraphDOT(G, "dot-graph-files/random-graph.dot");
-    leda::BFS(G, s, dist);
-    leda::node v;
-    if(tcLog) {
-      if(G.is_directed()) std::cout << "Graph G is directed\n";
-      else std::cout << "Graph G is undirected\n";
-      if(Is_Connected(G)) std::cout << "Graph G is also connected\n";
-      if(Is_Biconnected(G)) std::cout << "Graph G is also biconnected\n";
-      forall_nodes(v, G) {
-        std::cout << "Node: ";
-        G.print_node(v);
-        std::cout << ", dist: " << dist[v] << '\n';
-      }
-    }
+  leda::graph G;
+  leda::node a, b;
+  leda::node s{test_leda_graph(G, a, b)}; // ET starting node.
+  G.make_bidirected(); // Graph G needs to be of type graph and bidirected.
 
-    G.make_undirected();
-
-    writeGraphDOT(G, "dot-graph-files/random-ugraph.dot");
-    leda::node_array<int> dist2{G, -1};
-    leda::BFS(G, s, dist2);
-    if(tcLog) {
-      if(G.is_directed()) std::cout << "Graph G is directed\n";
-      else std::cout << "Graph G is undirected\n";
-      // if(Is_Connected(G)) std::cout << "Graph G is also connected\n";
-      // if(Is_Biconnected(G)) std::cout << "Graph G is also biconnected\n";
-      forall_nodes(v, G) {
-        std::cout << "Node: ";
-        G.print_node(v);
-        std::cout << ", dist: " << dist2[v] << '\n';
-      }
-    }
-  }
-
-  leda::graph Gb;
-  leda::node s{test_leda_graph(Gb)};
-  Gb.make_bidirected();
-
-  writeGraphDOT(Gb, "dot-graph-files/random-bigraph.dot");
-  ETTree T{Gb, s};
-  T.getVisits();
-
-  if(tcLog) {
-    leda::node_array<int> dist3{Gb, -1};
-    leda::BFS(Gb, s, dist3);
-    if(Gb.is_directed()) std::cout << "Graph G is directed\n";
-    else std::cout << "Graph G is undirected\n";
-    if(Is_Connected(Gb)) std::cout << "Graph G is also connected\n";
-    if(Is_Biconnected(Gb)) std::cout << "Graph G is also biconnected\n";
-    leda::node v;
-    forall_nodes(v, Gb) {
-      std::cout << "Node: ";
-      Gb.print_node(v);
-      std::cout << ", dist: " << dist3[v] << '\n';
-    }
-  }
+  writeGraphDOT(G, "dot-graph-files/example-bigraph.dot"); // Writes graph to file
+  ETTree T{G, s}; // Creates Euler Tour Tree of graph G
+  // G.clear();
+  T.print_euler_tour(); // Prints the ET sequence of nodes (order in which they were visited)
+  T.print_visits(); // Prints the table of the total visits of each node
+  T.delete_edge(a, b);
 
 // #############################################################################################################
 // TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN
@@ -111,11 +64,11 @@ int writeGraphDOT(const leda::graph &G, const std::string& filename)
   std::ofstream ofs;
   ofs.open(filename.c_str());
   // Set graph type
-  std::string graphType{"graph G {\nnode[shape = circle];"};
-  std::string graphEdgeType{" -- "};
-  if(G.is_directed()) {
-    graphType="digraph G {\nnode[shape = circle];";
-    graphEdgeType=" -> ";
+  std::string graphType{"digraph G {\nnode[shape = circle];"};
+  std::string graphEdgeType{" -> "};
+  if(G.is_undirected()) {
+    graphType="graph G {\nnode[shape = circle];";
+    graphEdgeType=" -- ";
   }
 
   ofs << graphType << '\n';
@@ -127,7 +80,7 @@ int writeGraphDOT(const leda::graph &G, const std::string& filename)
   forall_nodes(v, G) {
     A[v] = i++;
     // Node Coloring
-    std::string colorFill{", fillcolor = red, style = filled "};
+    std::string colorFill{", fillcolor = white, style = filled "};
     // if(A[v]==1)
     //   colorFill = ", fillcolor = brown, style = filled ";
     // else if(A[v]%2==0)
@@ -138,13 +91,13 @@ int writeGraphDOT(const leda::graph &G, const std::string& filename)
     //   colorFill = ", fillcolor = pink, style = filled ";
     // Nodes & Node Labels
     ofs << A[v] << " [ xlabel = \""
-    << "node label" << "\""
+    << "          " << "\""
     << colorFill << "];" << '\n';
   }
   // Edges & Edge Labels
   forall_edges(e, G) {
     ofs << A[G.source(e)] << graphEdgeType << A[G.target(e)]
-    << " [ label = \"" << "edge label" << "\" ];" << '\n';
+    << " [ label = \"" << "          " << "\" ];" << '\n';
   }
 	ofs << "}" << '\n';
 	ofs.close();
@@ -213,22 +166,29 @@ void test_leda_dynamic_trees() {
   std::cout << "mincost(v3)=" << D.cost(D.mincost(v3)) << std::endl;
 }
 
-leda::node test_leda_graph(leda::graph& G) {
-  const int nodeNum{10};
+leda::node test_leda_graph(leda::graph& G, leda::node &a, leda::node &b) {
+  const int nodeNum{17};
   std::array<leda::node, nodeNum> V;
   for(int i=0; i<nodeNum; i++) V[i]=G.new_node();
-  G.new_edge(V[1], V[0]);
-  G.new_edge(V[2], V[1]);
-  G.new_edge(V[3], V[0]);
-  G.new_edge(V[3], V[2]);
-  G.new_edge(V[3], V[4]);
-  G.new_edge(V[3], V[5]);
-  G.new_edge(V[3], V[6]);
-  G.new_edge(V[4], V[7]);
-  G.new_edge(V[4], V[8]);
+  a=V[6];
+  b=V[10];
+  G.new_edge(V[0], V[1]);
+  G.new_edge(V[0], V[2]);
+  G.new_edge(V[0], V[3]);
+  G.new_edge(V[1], V[4]);
+  G.new_edge(V[1], V[5]);
+  G.new_edge(V[2], V[6]);
+  G.new_edge(V[3], V[7]);
+  G.new_edge(V[3], V[8]);
   G.new_edge(V[6], V[9]);
-  G.new_edge(V[9], V[9]);
-  return V[3];
+  G.new_edge(V[6], V[10]);
+  G.new_edge(V[9], V[11]);
+  G.new_edge(V[10], V[12]);
+  G.new_edge(V[10], V[13]);
+  G.new_edge(V[12], V[14]);
+  G.new_edge(V[12], V[15]);
+  G.new_edge(V[14], V[16]);
+  return V[0];
 }
 // #############################################################################################################
 // TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN

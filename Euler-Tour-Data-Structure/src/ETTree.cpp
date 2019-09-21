@@ -12,15 +12,17 @@
 // Custom
 #include "ETTree.h"
 // Forward Declarations
-extern bool consoleLog;
 extern void displayMsg(std::string msg, std::string stateStr="status");
+
 // #############################################################################################################
 // TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN
 // #############################################################################################################
 // #############################################################################################################
 // TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN TRASH CAN
 // #############################################################################################################
-void ETTree::m_eulerTour(const leda::node &x) {
+
+// Function class members
+const void ETTree::m_eulerTour(leda::node &x) {
   m_visit(x);
   leda::node v;
   forall_adj_nodes(v, x) {
@@ -31,12 +33,9 @@ void ETTree::m_eulerTour(const leda::node &x) {
   }
 }
 
-void ETTree::m_visit(const leda::node &x) {
+const void ETTree::m_visit(leda::node &x) {
   m_visits[x]++;
-  if(consoleLog) {
-    m_G.print_node(x);
-    std::cout << '\n';
-  }
+  m_ETTree.push_back(&m_nodes[m_nodeID[x]]);
 }
 
 const bool ETTree::m_isVisited(const leda::node &x) {
@@ -44,41 +43,54 @@ const bool ETTree::m_isVisited(const leda::node &x) {
   else return true;
 }
 
-ETTree::ETTree(const leda::graph &G,const leda::node &root)
-  : m_G{G}, m_visits{m_G, 0} {
-  displayMsg("In constructor");
-  // Make G directed ()
-  if(m_G.is_undirected()) {
+// Constructors
+ETTree::ETTree(leda::graph &G,leda::node &root)
+  : m_G{&G}, m_nodeNum{G.number_of_nodes()}, m_root{&root}, m_visits{G, 0} {
+  // Check if G is directed
+  if(G.is_undirected()) {
     displayMsg("graph must be directed", "error");
     exit;
   }
-  if(m_G.empty()) {
+  // Check if G is empty
+  if(G.empty()) {
     displayMsg("graph cannot be empty", "error");
     exit;
   }
+
+  m_nodeID.init(G);
+  m_nodes.resize(m_nodeNum);
   leda::node v;
   int i{0};
   forall_nodes(v, G) {
-    if(v==root) {
-      break;
-    }
-    i++;
+    m_nodes[i]=v;
+    m_nodeID[v]=i++;
   }
-  forall_nodes(v, m_G) {
-    if(i==0) {
-      m_root=v;
-      break;
-    }
-    i--;
-  }
-  m_eulerTour(m_root);
+
+  m_eulerTour(*m_root);
 }
 
-const void ETTree::getVisits() {
-  leda::node v;
-  forall_nodes(v, m_G) {
-    std::cout << "m_visits";
-    m_G.print_node(v);
-    std::cout << ": " << m_visits[v] << '\n';
+// Access Operations
+const void ETTree::euler_tour() {
+
+}
+
+// Update Operations
+int ETTree::delete_edge(const leda::node &a, const leda::node &b) {
+  // std::cout << m_ETTree.rank(a) << '\n';
+}
+
+// I/O Operations
+const void ETTree::print_visits() {
+  for(int i=0; i<m_nodeNum; i++) {
+    leda::node v{m_nodes[i]};
+    std::cout << "m_visits[" << m_nodeID[v] << "]:\t" << m_visits[v] << '\n';
   }
+}
+
+const void ETTree::print_euler_tour() {
+  leda::list_item it;
+  forall_items(it, m_ETTree) {
+    std::cout << "[" << m_nodeID[*m_ETTree[it]] << "]";
+  }
+  std::cout << '\n';
 }
